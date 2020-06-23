@@ -30,6 +30,7 @@ local mimArmor = new.bool(true)
 local mimCheck = new.bool(true)
 local mimCheckAFK = new.bool(true)
 local mimFontSize = new.int(8)
+local mimZazhim = new.bool(true)
 
 mainIni = inicfg.load(
 {
@@ -41,7 +42,8 @@ mainIni = inicfg.load(
 		armor = mimArmor[0],
 		check = mimCheck[0],
 		checkafk = mimCheckAFK[0],
-		fontsize = mimFontSize[0]
+		fontsize = mimFontSize[0],
+		zazhim = mimZazhim[0]
 	}
 }, "wallhack.ini")
 
@@ -58,6 +60,7 @@ local checkafk = mainIni.set.checkafk
 local fontsize = mainIni.set.fontsize
 local wh = mainIni.set.wh
 local fontcheat = renderCreateFont('Tahoma', fontsize, FCR_BORDER)
+local zazhim = mainIni.set.zazhim
 
 function main()
 	if getMoonloaderVersion() <= 26 then 
@@ -78,6 +81,7 @@ function main()
 	mimCheck[0] = check
 	mimCheckAFK[0] = checkafk
 	mimFontSize[0] = fontsize
+	mimZazhim[0] = zazhim
 
 	if not isSampLoaded() or not isCleoLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() do wait(50) end
@@ -86,9 +90,15 @@ function main()
 	
 	while true do wait(0)
 		
-		if isKeyDown(VK_1) and isKeyDown(VK_R) then	
-			enablecheat = true
-		else enablecheat = false
+		if mimZazhim[0] then
+			if isKeyDown(VK_1) and isKeyDown(VK_X) then	
+				enablecheat = true
+			else enablecheat = false
+			end
+		else
+			if wasKeyPressed(VK_1) and wasKeyPressed(VK_X) then	
+				enablecheat = not enablecheat
+			end
 		end
 		
 		if enablecheat and mimWH[0] then
@@ -236,6 +246,11 @@ function ()
 	if mimgui.Checkbox(u8"Статус AFK", mimCheckAFK) then 
 		checkafk = tostring(mimCheckAFK[0])
 		settingsIni.set.checkafk = checkafk
+		inicfg.save(mainIni, settings)
+	end
+	if mimgui.Checkbox(u8"Зажимать или нет", mimZazhim) then
+		zazhim = tostring(mimZazhim[0])
+		settingsIni.set.zazhim = zazhim
 		inicfg.save(mainIni, settings)
 	end
 	mimgui.Separator()

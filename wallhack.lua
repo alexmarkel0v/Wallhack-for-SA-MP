@@ -1,6 +1,6 @@
 script_name('Wallhack for SA-MP')
 script_author('0x23F')
-script_version('1.1')
+script_version('1.1.2')
 
 require 'libstd.deps' {
    'fyp:mimgui'
@@ -31,6 +31,7 @@ local mimCheck = new.bool(true)
 local mimCheckAFK = new.bool(true)
 local mimFontSize = new.int(8)
 local mimZazhim = new.bool(true)
+local mimHideScreen = new.bool(true)
 
 mainIni = inicfg.load(
 {
@@ -43,7 +44,8 @@ mainIni = inicfg.load(
 		check = mimCheck[0],
 		checkafk = mimCheckAFK[0],
 		fontsize = mimFontSize[0],
-		zazhim = mimZazhim[0]
+		zazhim = mimZazhim[0],
+		hidescreen = mimHideScreen[0]
 	}
 }, "wallhack.ini")
 
@@ -61,6 +63,7 @@ local fontsize = mainIni.set.fontsize
 local wh = mainIni.set.wh
 local fontcheat = renderCreateFont('Tahoma', fontsize, FCR_BORDER)
 local zazhim = mainIni.set.zazhim
+local hidescreen = mainIni.set.hidescreen
 
 function main()
 	if getMoonloaderVersion() <= 26 then 
@@ -82,6 +85,7 @@ function main()
 	mimCheckAFK[0] = checkafk
 	mimFontSize[0] = fontsize
 	mimZazhim[0] = zazhim
+	mimHideScreen[0] = hidescreen
 
 	if not isSampLoaded() or not isCleoLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() do wait(50) end
@@ -101,6 +105,14 @@ function main()
 			end
 		end
 		
+		if wasKeyPressed(119) then
+			if mimHideScreen[0] then
+				local cheat = enablecheat
+				enablecheat = false
+				wait(2000)
+				enablecheat = cheat
+			end
+		end
 		if enablecheat and mimWH[0] then
 			if not mimCheck[0] or mimCheck[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
 				for ID = 0, sampGetMaxPlayerId() do
@@ -167,7 +179,7 @@ function apply_custom_style()
    style.WindowPadding = mimgui.ImVec2(4.0, 4.0)
    style.FramePadding = mimgui.ImVec2(2.5, 3.5)
    style.ButtonTextAlign = mimgui.ImVec2(0.5, 0.35)
-   style.WindowMinSize = mimgui.ImVec2(500, 235)
+   style.WindowMinSize = mimgui.ImVec2(500, 300)
  
    colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
    colors[clr.TextDisabled]           = ImVec4(0.7, 0.7, 0.7, 1.0)
@@ -216,8 +228,10 @@ mimgui.OnFrame(function () return mimShow[0] end,
 function ()
     local w, h = getScreenResolution()
     mimgui.SetNextWindowPos(mimgui.ImVec2(w / 2, h / 2), mimgui.Cond.Always, mimgui.ImVec2(0.5, 0.5))
-    mimgui.SetNextWindowSize(mimgui.ImVec2(500, 235), mimgui.Cond.Always)
-    mimgui.Begin(u8"Настройки Wallhack'a", mimShow, mimgui.WindowFlags.NoCollapse + mimgui.WindowFlags.NoResize + mimgui.WindowFlags.NoMove + mimgui.WindowFlags.NoBringToFrontOnFocus + mimgui.WindowFlags.AlwaysAutoResize)
+    mimgui.SetNextWindowSize(mimgui.ImVec2(500, 300), mimgui.Cond.Always)
+    mimgui.Begin(u8"Wallhack", mimShow, mimgui.WindowFlags.NoCollapse + mimgui.WindowFlags.NoResize + mimgui.WindowFlags.NoMove + mimgui.WindowFlags.NoBringToFrontOnFocus + mimgui.WindowFlags.AlwaysAutoResize)
+	mimgui.Text(u8"Если забыли - активация X+1")
+	mimgui.Separator()
 	if mimgui.Checkbox(u8"Включить Wallhack", mimWH) then 
 		wh = tostring(mimWH[0])
 		settingsIni.set.wh = wh
@@ -251,6 +265,11 @@ function ()
 	if mimgui.Checkbox(u8"Зажимать или нет", mimZazhim) then
 		zazhim = tostring(mimZazhim[0])
 		settingsIni.set.zazhim = zazhim
+		inicfg.save(mainIni, settings)
+	end
+	if mimgui.Checkbox(u8"Скрывать на скриншотах", mimHideScreen) then
+		hidescreen = tostring(mimHideScreen[0])
+		settingsIni.set.hidescreen = hidescreen
 		inicfg.save(mainIni, settings)
 	end
 	mimgui.Separator()

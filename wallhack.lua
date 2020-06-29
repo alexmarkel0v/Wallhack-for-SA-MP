@@ -460,7 +460,7 @@ function ()
 		end
 	end
 	if mimgui.CollapsingHeader(u8"Настройки ESP") then
-		if mimgui.Checkbox(u8"Включить ESP", mimESP) then
+		if mimgui.Checkbox(u8"ESP", mimESP) then
 			esp = tostring(mimESP[0])
 			settingsIni.set.esp = esp
 			inicfg.save(mainIni, settings)

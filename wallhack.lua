@@ -1,6 +1,6 @@
 script_name('Wallhack for SA-MP')
 script_author('0x23F')
-script_version('1.1.2')
+script_version('1.2')
 
 require 'libstd.deps' {
    'fyp:mimgui'
@@ -32,6 +32,12 @@ local mimCheckAFK = new.bool(true)
 local mimFontSize = new.int(8)
 local mimZazhim = new.bool(true)
 local mimHideScreen = new.bool(true)
+local mimESP = new.bool(true)
+local mimESPLine = new.bool(true)
+local mimDistance = new.bool(true)
+local mimESPLineUseColor = new.bool(true)
+local mimESPUseColor = new.bool(true)
+local mimUseColorKosti = new.bool(true)
 
 mainIni = inicfg.load(
 {
@@ -45,7 +51,16 @@ mainIni = inicfg.load(
 		checkafk = mimCheckAFK[0],
 		fontsize = mimFontSize[0],
 		zazhim = mimZazhim[0],
-		hidescreen = mimHideScreen[0]
+		hidescreen = mimHideScreen[0],
+		esp = mimESP[0],
+		espline = mimESPLine[0],
+		distance = mimDistance[0],
+		espcolor = '1.00|1.00|1.00',
+		esplinecolor = '1.00|1.00|1.00',
+		esplinecoloruse = mimESPLineUseColor[0],
+		espcoloruse = mimESPUseColor[0],
+		usecolorkosti = mimUseColorKosti[0],
+		kosticolor = '1.00|1.00|1.00'
 	}
 }, "wallhack.ini")
 
@@ -64,6 +79,26 @@ local wh = mainIni.set.wh
 local fontcheat = renderCreateFont('Tahoma', fontsize, FCR_BORDER)
 local zazhim = mainIni.set.zazhim
 local hidescreen = mainIni.set.hidescreen
+local esp = mainIni.set.esp
+local espline = mainIni.set.espline
+local distance = mainIni.set.distance
+
+local r, g, b = mainIni.set.espcolor:match('(.+)|(.+)|(.+)')
+r, g, b = tonumber(r), tonumber(g), tonumber(b)
+local espcolor, mimESPColor = mimgui.ImVec4(r, g, b, 255), new.float[3](r, g, b)
+
+local r, g, b = mainIni.set.esplinecolor:match('(.+)|(.+)|(.+)')
+r, g, b = tonumber(r), tonumber(g), tonumber(b)
+local esplinecolor, mimESPLineColor = mimgui.ImVec4(r, g, b, 255), new.float[3](r, g, b)
+
+local esplinecoloruse = mainIni.set.esplinecoloruse
+local espcoloruse = mainIni.set.espcoloruse
+local usecolorkosti = mainIni.set.usecolorkosti
+
+local r, g, b = mainIni.set.kosticolor:match('(.+)|(.+)|(.+)')
+r, g, b = tonumber(r), tonumber(g), tonumber(b)
+local kosticolor, mimKostiColor = mimgui.ImVec4(r, g, b, 255), new.float[3](r, g, b)
+
 
 function main()
 	if getMoonloaderVersion() <= 26 then 
@@ -86,6 +121,12 @@ function main()
 	mimFontSize[0] = fontsize
 	mimZazhim[0] = zazhim
 	mimHideScreen[0] = hidescreen
+	mimESP[0] = esp
+	mimESPLine[0] = espline
+	mimDistance[0] = distance
+	mimESPLineUseColor[0] = esplinecoloruse
+	mimESPUseColor[0] = espcoloruse
+	mimUseColorKosti[0] = usecolorkosti
 
 	if not isSampLoaded() or not isCleoLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() do wait(50) end
@@ -115,21 +156,27 @@ function main()
 		end
 		if enablecheat and mimWH[0] then
 			if not mimCheck[0] or mimCheck[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
-				for ID = 0, sampGetMaxPlayerId() do
+				for ID = 0, sampGetMaxPlayerId(true) do
 					if sampIsPlayerConnected(ID) then
 						result, ped = sampGetCharHandleBySampPlayerId(ID)
-						if result then
-							X, Y, Z = getOffsetFromCharInWorldCoords(ped, 0.0, 0.0, 0.0)
+						if result and doesCharExist(ped) then
+							X, Y, Z = getCharCoordinates(ped)
+							local color
+							local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
+							x2, y2 = convert3DCoordsToScreen(X, Y, Z)
 							if isPointOnScreen(X, Y, Z, 0.0) then
-								x2, y2 = convert3DCoordsToScreen(X, Y, Z)
-								local color = sampGetPlayerColor(ID)
-								local aa, rr, gg, bb = explode_argb(color)
-								local color = join_argb(255, rr, gg, bb)
 								renderFontDrawText(fontcheat, string.format('%s[%d]', sampGetPlayerNickname(ID), ID), x2 + 2, y2, color) 
 								if mimHealth[0] then renderFontDrawText(fontcheat, string.format('Health: %d', sampGetPlayerHealth(ID)), x2 + 2, y2 + 12, 0xFFFFFFFF) end
 								if mimArmor[0] then renderFontDrawText(fontcheat, string.format('Armour: %d', sampGetPlayerArmor(ID)), x2 + 2, y2 + 24, 0xFFFFFFFF) end
 								if sampIsPlayerPaused(ID) and mimCheckAFK[0] then renderFontDrawText(fontcheat, "AFK", x2 + 100, y2 + 24, 0xFFFF0000) end
+								if mimDistance[0] then renderFontDrawText(fontcheat, string.format('Distance: %d m', getDistanceBetweenCoords3d(X, Y, Z, myX, myY, myZ)), x2 + 2, y2 + 36, 0xFFFFFFFF) end
 								if mimKosti[0] then
+									if not mimUseColorKosti[0] then color = join_argb(255, tonumber(mimKostiColor[0] * 255), tonumber(mimKostiColor[1] * 255), tonumber(mimKostiColor[2] * 255))
+									else
+										color = sampGetPlayerColor(ID)
+										local aa, rr, gg, bb = explode_argb(color)
+										color = join_argb(255, rr, gg, bb)
+									end
 									local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
 									for v = 1, #t do
 										pos1X, pos1Y, pos1Z = getBodyPartCoordinates(t[v], ped)
@@ -148,6 +195,127 @@ function main()
 										posX, posY, posZ = getBodyPartCoordinates(t[v], ped)
 										pos1, pos2 = convert3DCoordsToScreen(posX, posY, posZ)
 									end
+								end
+								if mimESPLine[0] then
+									if not mimESPLineUseColor[0] then color = join_argb(255, tonumber(mimESPLineColor[0] * 255), tonumber(mimESPLineColor[1] * 255), tonumber(mimESPLineColor[2] * 255))
+									else 
+										color = sampGetPlayerColor(ID)
+										local aa, rr, gg, bb = explode_argb(color)
+										color = join_argb(255, rr, gg, bb)
+									end
+									myx, myy = convert3DCoordsToScreen(myX, myY, myZ)
+									renderDrawLine(myx, myy, x2, y2, 2, color)
+								end
+								if mimESP[0] then					
+									if not mimESPUseColor[0] then color = join_argb(255, tonumber(mimESPColor[0] * 255), tonumber(mimESPColor[1] * 255), tonumber(mimESPColor[2] * 255))
+									else
+										color = sampGetPlayerColor(ID)
+										local aa, rr, gg, bb = explode_argb(color)
+										color = join_argb(255, rr, gg, bb)
+									end
+									local x1, y1, z1, lx, ly, lz, scx1, scy2, scx2, scy2
+									local model = getCharModel(ped)
+									
+									x1, y1, z1 = getModelDimensions(model)
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, -y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, -y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, -y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, -y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, -y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, -y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, -y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, -y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz-(z1*2))
+									
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+
+
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, -y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, -y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz)
+
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, -y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz)
+
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, -x1, y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz)
+
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
+									
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, y1, z1)
+									scx1, scy1 = convert3DCoordsToScreen(lx, ly, lz)
+
+									lx, ly, lz = getOffsetFromCharInWorldCoords(ped, x1, -y1, z1)
+									scx2, scy2 = convert3DCoordsToScreen(lx, ly, lz)
+
+									renderDrawLine(scx1, scy1, scx2, scy2, 2, color)
 								end
 							end
 						end
@@ -179,7 +347,7 @@ function apply_custom_style()
    style.WindowPadding = mimgui.ImVec2(4.0, 4.0)
    style.FramePadding = mimgui.ImVec2(2.5, 3.5)
    style.ButtonTextAlign = mimgui.ImVec2(0.5, 0.35)
-   style.WindowMinSize = mimgui.ImVec2(500, 300)
+   style.WindowMinSize = mimgui.ImVec2(500, 302)
  
    colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
    colors[clr.TextDisabled]           = ImVec4(0.7, 0.7, 0.7, 1.0)
@@ -228,49 +396,101 @@ mimgui.OnFrame(function () return mimShow[0] end,
 function ()
     local w, h = getScreenResolution()
     mimgui.SetNextWindowPos(mimgui.ImVec2(w / 2, h / 2), mimgui.Cond.Always, mimgui.ImVec2(0.5, 0.5))
-    mimgui.SetNextWindowSize(mimgui.ImVec2(500, 300), mimgui.Cond.Always)
+    mimgui.SetNextWindowSize(mimgui.ImVec2(500, 302), mimgui.Cond.Always)
     mimgui.Begin(u8"Wallhack", mimShow, mimgui.WindowFlags.NoCollapse + mimgui.WindowFlags.NoResize + mimgui.WindowFlags.NoMove + mimgui.WindowFlags.NoBringToFrontOnFocus + mimgui.WindowFlags.AlwaysAutoResize)
 	mimgui.Text(u8"Если забыли - активация X+1")
 	mimgui.Separator()
-	if mimgui.Checkbox(u8"Включить Wallhack", mimWH) then 
-		wh = tostring(mimWH[0])
-		settingsIni.set.wh = wh
-		inicfg.save(mainIni, settings)
+	if mimgui.CollapsingHeader(u8"Настройки") then
+		if mimgui.Checkbox(u8"Включить Wallhack", mimWH) then 
+			wh = tostring(mimWH[0])
+			settingsIni.set.wh = wh
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Скелет", mimKosti) then 
+			skelet = tostring(mimKosti[0])
+			settingsIni.set.kosti = kosti
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Уровень здоровья", mimHealth) then 
+			health = tostring(mimHealth[0])
+			settingsIni.set.health = health
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Уровень брони", mimArmor) then 
+			armor = tostring(mimArmor[0])
+			settingsIni.set.armor = armor
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Проверять включён ли чат, показан ли диалог", mimCheck) then 
+			check = tostring(mimCheck[0])
+			settingsIni.set.check = check
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Статус AFK", mimCheckAFK) then 
+			checkafk = tostring(mimCheckAFK[0])
+			settingsIni.set.checkafk = checkafk
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Зажимать или нет", mimZazhim) then
+			zazhim = tostring(mimZazhim[0])
+			settingsIni.set.zazhim = zazhim
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Скрывать на скриншотах", mimHideScreen) then
+			hidescreen = tostring(mimHideScreen[0])
+			settingsIni.set.hidescreen = hidescreen
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Дистанция до человека", mimDistance) then
+			distance = tostring(mimDistance[0])
+			settingsIni.set.distance = distance
+			inicfg.save(mainIni, settings)
+		end
+		mimgui.Separator()
+		if mimgui.Checkbox(u8"Использовать цвет ника для скелета", mimUseColorKosti) then 
+			usecolorkosti = tostring(mimUseColorKosti[0])
+			settingsIni.set.usecolorkosti = usecolorkosti
+			inicfg.save(mainIni, settings)
+		end
+		mimgui.Separator()
+		if mimgui.ColorEdit3(u8"Цвет скелета", mimKostiColor) then
+			kosticolor = mimgui.ImVec4(mimKostiColor[0], mimKostiColor[1], mimKostiColor[2], 255)
+			settingsIni.set.espcolor = mimKostiColor[0]..'|'..mimKostiColor[1]..'|'..mimKostiColor[2]
+			inicfg.save(mainIni, settings)
+		end
 	end
-	if mimgui.Checkbox(u8"Скелет", mimKosti) then 
-		skelet = tostring(mimKosti[0])
-		settingsIni.set.kosti = kosti
-		inicfg.save(mainIni, settings)
-	end
-	if mimgui.Checkbox(u8"Уровень здоровья", mimHealth) then 
-		health = tostring(mimHealth[0])
-		settingsIni.set.health = health
-		inicfg.save(mainIni, settings)
-	end
-	if mimgui.Checkbox(u8"Уровень брони", mimArmor) then 
-		armor = tostring(mimArmor[0])
-		settingsIni.set.armor = armor
-		inicfg.save(mainIni, settings)
-	end
-	if mimgui.Checkbox(u8"Проверять включён ли чат, показан ли диалог", mimCheck) then 
-		check = tostring(mimCheck[0])
-		settingsIni.set.check = check
-		inicfg.save(mainIni, settings)
-	end
-	if mimgui.Checkbox(u8"Статус AFK", mimCheckAFK) then 
-		checkafk = tostring(mimCheckAFK[0])
-		settingsIni.set.checkafk = checkafk
-		inicfg.save(mainIni, settings)
-	end
-	if mimgui.Checkbox(u8"Зажимать или нет", mimZazhim) then
-		zazhim = tostring(mimZazhim[0])
-		settingsIni.set.zazhim = zazhim
-		inicfg.save(mainIni, settings)
-	end
-	if mimgui.Checkbox(u8"Скрывать на скриншотах", mimHideScreen) then
-		hidescreen = tostring(mimHideScreen[0])
-		settingsIni.set.hidescreen = hidescreen
-		inicfg.save(mainIni, settings)
+	if mimgui.CollapsingHeader(u8"Настройки ESP") then
+		if mimgui.Checkbox(u8"Включить ESP", mimESP) then
+			esp = tostring(mimESP[0])
+			settingsIni.set.esp = esp
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Линия ESP", mimESPLine) then
+			espline = tostring(mimESPLine[0])
+			settingsIni.set.espline = espline
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Использовать для цвета линии ESP цвет ника", mimESPLineUseColor) then
+			distance = tostring(mimESPLineUseColor[0])
+			settingsIni.set.distance = distance
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Использовать для ESP цвет ника", mimESPUseColor) then
+			distance = tostring(mimESPUseColor[0])
+			settingsIni.set.distance = distance
+			inicfg.save(mainIni, settings)
+		end
+		mimgui.Separator()
+		if mimgui.ColorEdit3(u8"Цвет ESP", mimESPColor) then
+			espcolor = mimgui.ImVec4(mimESPColor[0], mimESPColor[1], mimESPColor[2], 255)
+			settingsIni.set.espcolor = mimESPColor[0]..'|'..mimESPColor[1]..'|'..mimESPColor[2]
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.ColorEdit3(u8"Цвет линии ESP", mimESPLineColor) then
+			espcolor = mimgui.ImVec4(mimESPLineColor[0], mimESPLineColor[1], mimESPLineColor[2], 255)
+			settingsIni.set.esplinecolor = mimESPLineColor[0]..'|'..mimESPLineColor[1]..'|'..mimESPLineColor[2]
+			inicfg.save(mainIni, settings)
+		end
 	end
 	mimgui.Separator()
 	if mimgui.SliderInt(u8"Размер шрифта", mimFontSize, 4, 25) then
@@ -304,4 +524,17 @@ function explode_argb(argb)
   local g = bit.band(bit.rshift(argb, 8), 0xFF)
   local b = bit.band(argb, 0xFF)
   return a, r, g, b
+end
+
+function getDistanceBetweenPlayers(id1, id2)
+    local result, ped1 = sampGetCharHandleBySampPlayerId(id1)
+    if result then
+        local result, ped2 = sampGetCharHandleBySampPlayerId(id2)
+        if result then
+            local x1, y1, z1 = getCharCoordinates(ped1)
+            local x2, y2, z2 = getCharCoordinates(ped2)
+            return getDistanceBetweenCoords3d(x1, y1, z1, x2, y2, z2)
+        end
+    end
+    return nil
 end

@@ -400,8 +400,8 @@ function ()
     mimgui.Begin(u8"Wallhack", mimShow, mimgui.WindowFlags.NoCollapse + mimgui.WindowFlags.NoResize + mimgui.WindowFlags.NoMove + mimgui.WindowFlags.NoBringToFrontOnFocus + mimgui.WindowFlags.AlwaysAutoResize)
 	mimgui.Text(u8"Если забыли - активация X+1")
 	mimgui.Separator()
-	if mimgui.CollapsingHeader(u8"Настройки") then
-		if mimgui.Checkbox(u8"Включить Wallhack", mimWH) then 
+	if mimgui.CollapsingHeader(u8"Основные настройки") then
+		if mimgui.Checkbox("Wallhack", mimWH) then 
 			wh = tostring(mimWH[0])
 			settingsIni.set.wh = wh
 			inicfg.save(mainIni, settings)
@@ -460,7 +460,7 @@ function ()
 		end
 	end
 	if mimgui.CollapsingHeader(u8"Настройки ESP") then
-		if mimgui.Checkbox(u8"ESP", mimESP) then
+		if mimgui.Checkbox("ESP", mimESP) then
 			esp = tostring(mimESP[0])
 			settingsIni.set.esp = esp
 			inicfg.save(mainIni, settings)

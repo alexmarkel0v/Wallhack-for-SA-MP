@@ -1,6 +1,6 @@
 script_name('Wallhack for SA-MP')
 script_author('0x23F')
-script_version('1.2.1')
+script_version('1.2.2')
 
 require 'libstd.deps' {
    'fyp:mimgui'
@@ -40,6 +40,7 @@ local mimESPUseColor = new.bool(true)
 local mimUseColorKosti = new.bool(true)
 local mimNick = new.bool(true)
 local mimID = new.bool(true)
+local mimUseColorNick = new.bool(true)
 
 mainIni = inicfg.load(
 {
@@ -64,7 +65,9 @@ mainIni = inicfg.load(
 		usecolorkosti = mimUseColorKosti[0],
 		kosticolor = '1.00|1.00|1.00',
 		nick = mimNick[0],
-		id = mimID[0]
+		id = mimID[0],
+		usecolornick = mimUseColorNick[0],
+		nickcolor = '1.00|1.00|1.00'
 	}
 }, "wallhack.ini")
 
@@ -73,7 +76,7 @@ local settingsIni = inicfg.load(mainIni, settings)
 
 if not doesFileExist('moonloader/config/wallhack.ini') then inicfg.save(mainIni, 'wallhack.ini') end
 
-local skelet = mainIni.set.kosti
+local kosti = mainIni.set.kosti
 local health = mainIni.set.health
 local armor = mainIni.set.armor
 local check = mainIni.set.check
@@ -89,11 +92,12 @@ local distance = mainIni.set.distance
 local nick = mainIni.set.nick
 local id = mainIni.set.id
 
-local r, g, b = mainIni.set.espcolor:match('(.+)|(.+)|(.+)')
+local r, g, b
+r, g, b = mainIni.set.espcolor:match('(.+)|(.+)|(.+)')
 r, g, b = tonumber(r), tonumber(g), tonumber(b)
 local espcolor, mimESPColor = mimgui.ImVec4(r, g, b, 255), new.float[3](r, g, b)
 
-local r, g, b = mainIni.set.esplinecolor:match('(.+)|(.+)|(.+)')
+r, g, b = mainIni.set.esplinecolor:match('(.+)|(.+)|(.+)')
 r, g, b = tonumber(r), tonumber(g), tonumber(b)
 local esplinecolor, mimESPLineColor = mimgui.ImVec4(r, g, b, 255), new.float[3](r, g, b)
 
@@ -101,9 +105,15 @@ local esplinecoloruse = mainIni.set.esplinecoloruse
 local espcoloruse = mainIni.set.espcoloruse
 local usecolorkosti = mainIni.set.usecolorkosti
 
-local r, g, b = mainIni.set.kosticolor:match('(.+)|(.+)|(.+)')
+r, g, b = mainIni.set.kosticolor:match('(.+)|(.+)|(.+)')
 r, g, b = tonumber(r), tonumber(g), tonumber(b)
 local kosticolor, mimKostiColor = mimgui.ImVec4(r, g, b, 255), new.float[3](r, g, b)
+
+local usecolornick = mainIni.set.usecolornick
+
+r, g, b = mainIni.set.nickcolor:match('(.+)|(.+)|(.+)')
+r, g, b = tonumber(r), tonumber(g), tonumber(b)
+local nickcolor, mimNickColor = mimgui.ImVec4(r, g, b, 255), new.float[3](r, g, b)
 
 
 function main()
@@ -119,7 +129,7 @@ function main()
 	end
 	
 	mimWH[0] = wh
-	mimKosti[0] = skelet
+	mimKosti[0] = kosti
 	mimHealth[0] = health
 	mimArmor[0] = armor
 	mimCheck[0] = check
@@ -135,6 +145,7 @@ function main()
 	mimUseColorKosti[0] = usecolorkosti
 	mimNick[0] = nick
 	mimID[0] = id
+	mimUseColorNick[0] = usecolornick
 
 	if not isSampLoaded() or not isCleoLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() do wait(50) end
@@ -170,13 +181,16 @@ function main()
 						if result and doesCharExist(ped) then
 							X, Y, Z = getCharCoordinates(ped)
 							local color
-							color = sampGetPlayerColor(ID)
-							local aa, rr, gg, bb = explode_argb(color)
-							color = join_argb(255, rr, gg, bb)
 							local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
 							x2, y2 = convert3DCoordsToScreen(X, Y, Z)
 							if isPointOnScreen(X, Y, Z, 0.0) then
 								if mimNick[0] then 
+									if not mimUseColorNick[0] then color = join_argb(255, tonumber(mimNickColor[0] * 255), tonumber(mimNickColor[1] * 255), tonumber(mimNickColor[2] * 255))
+									else
+										color = sampGetPlayerColor(ID)
+										aa, rr, gg, bb = explode_argb(color)
+										color = join_argb(255, rr, gg, bb)
+									end
 									if not mimID[0] then renderFontDrawText(fontcheat, string.format('%s', sampGetPlayerNickname(ID)), x2 + 2, y2, color) 
 									else renderFontDrawText(fontcheat, string.format('%s[%d]', sampGetPlayerNickname(ID), ID), x2 + 2, y2, color) 
 									end
@@ -432,7 +446,7 @@ function ()
 			inicfg.save(mainIni, settings)
 		end
 		if mimgui.Checkbox(u8"—келет", mimKosti) then 
-			skelet = tostring(mimKosti[0])
+			kosti = tostring(mimKosti[0])
 			settingsIni.set.kosti = kosti
 			inicfg.save(mainIni, settings)
 		end
@@ -477,10 +491,19 @@ function ()
 			settingsIni.set.usecolorkosti = usecolorkosti
 			inicfg.save(mainIni, settings)
 		end
-		mimgui.Separator()
+		if mimgui.Checkbox(u8"»спользовать обычные цвета ников", mimUseColorNick) then 
+			usecolornick = tostring(mimUseColorNick[0])
+			settingsIni.set.usecolornick = usecolornick
+			inicfg.save(mainIni, settings)
+		end
 		if mimgui.ColorEdit3(u8"÷вет скелета", mimKostiColor) then
 			kosticolor = mimgui.ImVec4(mimKostiColor[0], mimKostiColor[1], mimKostiColor[2], 255)
-			settingsIni.set.espcolor = mimKostiColor[0]..'|'..mimKostiColor[1]..'|'..mimKostiColor[2]
+			settingsIni.set.kosticolor = mimKostiColor[0]..'|'..mimKostiColor[1]..'|'..mimKostiColor[2]
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.ColorEdit3(u8"÷вет ников", mimNickColor) then
+			nickcolor = mimgui.ImVec4(mimNickColor[0], mimNickColor[1], mimNickColor[2], 255)
+			settingsIni.set.nickcolor = mimNickColor[0]..'|'..mimNickColor[1]..'|'..mimNickColor[2]
 			inicfg.save(mainIni, settings)
 		end
 	end
@@ -495,24 +518,24 @@ function ()
 			settingsIni.set.espline = espline
 			inicfg.save(mainIni, settings)
 		end
+		mimgui.Separator()
 		if mimgui.Checkbox(u8"»спользовать дл€ цвета линии ESP цвет ника", mimESPLineUseColor) then
-			distance = tostring(mimESPLineUseColor[0])
-			settingsIni.set.distance = distance
+			esplinecoloruse = tostring(mimESPLineUseColor[0])
+			settingsIni.set.esplinecoloruse = esplinecoloruse
 			inicfg.save(mainIni, settings)
 		end
 		if mimgui.Checkbox(u8"»спользовать дл€ ESP цвет ника", mimESPUseColor) then
-			distance = tostring(mimESPUseColor[0])
-			settingsIni.set.distance = distance
+			espcoloruse = tostring(mimESPUseColor[0])
+			settingsIni.set.espcoloruse = espcoloruse
 			inicfg.save(mainIni, settings)
 		end
-		mimgui.Separator()
 		if mimgui.ColorEdit3(u8"÷вет ESP", mimESPColor) then
 			espcolor = mimgui.ImVec4(mimESPColor[0], mimESPColor[1], mimESPColor[2], 255)
 			settingsIni.set.espcolor = mimESPColor[0]..'|'..mimESPColor[1]..'|'..mimESPColor[2]
 			inicfg.save(mainIni, settings)
 		end
 		if mimgui.ColorEdit3(u8"÷вет линии ESP", mimESPLineColor) then
-			espcolor = mimgui.ImVec4(mimESPLineColor[0], mimESPLineColor[1], mimESPLineColor[2], 255)
+			esplinecolor = mimgui.ImVec4(mimESPLineColor[0], mimESPLineColor[1], mimESPLineColor[2], 255)
 			settingsIni.set.esplinecolor = mimESPLineColor[0]..'|'..mimESPLineColor[1]..'|'..mimESPLineColor[2]
 			inicfg.save(mainIni, settings)
 		end

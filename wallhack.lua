@@ -1,6 +1,6 @@
 script_name('Wallhack for SA-MP')
 script_author('0x23F')
-script_version('1.2')
+script_version('1.2.1')
 
 require 'libstd.deps' {
    'fyp:mimgui'
@@ -30,7 +30,7 @@ local mimArmor = new.bool(true)
 local mimCheck = new.bool(true)
 local mimCheckAFK = new.bool(true)
 local mimFontSize = new.int(8)
-local mimZazhim = new.bool(true)
+local mimZazhim = new.bool(false)
 local mimHideScreen = new.bool(true)
 local mimESP = new.bool(true)
 local mimESPLine = new.bool(true)
@@ -38,6 +38,8 @@ local mimDistance = new.bool(true)
 local mimESPLineUseColor = new.bool(true)
 local mimESPUseColor = new.bool(true)
 local mimUseColorKosti = new.bool(true)
+local mimNick = new.bool(true)
+local mimID = new.bool(true)
 
 mainIni = inicfg.load(
 {
@@ -60,7 +62,9 @@ mainIni = inicfg.load(
 		esplinecoloruse = mimESPLineUseColor[0],
 		espcoloruse = mimESPUseColor[0],
 		usecolorkosti = mimUseColorKosti[0],
-		kosticolor = '1.00|1.00|1.00'
+		kosticolor = '1.00|1.00|1.00',
+		nick = mimNick[0],
+		id = mimID[0]
 	}
 }, "wallhack.ini")
 
@@ -82,6 +86,8 @@ local hidescreen = mainIni.set.hidescreen
 local esp = mainIni.set.esp
 local espline = mainIni.set.espline
 local distance = mainIni.set.distance
+local nick = mainIni.set.nick
+local id = mainIni.set.id
 
 local r, g, b = mainIni.set.espcolor:match('(.+)|(.+)|(.+)')
 r, g, b = tonumber(r), tonumber(g), tonumber(b)
@@ -127,6 +133,8 @@ function main()
 	mimESPLineUseColor[0] = esplinecoloruse
 	mimESPUseColor[0] = espcoloruse
 	mimUseColorKosti[0] = usecolorkosti
+	mimNick[0] = nick
+	mimID[0] = id
 
 	if not isSampLoaded() or not isCleoLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() do wait(50) end
@@ -162,10 +170,17 @@ function main()
 						if result and doesCharExist(ped) then
 							X, Y, Z = getCharCoordinates(ped)
 							local color
+							color = sampGetPlayerColor(ID)
+							local aa, rr, gg, bb = explode_argb(color)
+							color = join_argb(255, rr, gg, bb)
 							local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
 							x2, y2 = convert3DCoordsToScreen(X, Y, Z)
 							if isPointOnScreen(X, Y, Z, 0.0) then
-								renderFontDrawText(fontcheat, string.format('%s[%d]', sampGetPlayerNickname(ID), ID), x2 + 2, y2, color) 
+								if mimNick[0] then 
+									if not mimID[0] then renderFontDrawText(fontcheat, string.format('%s', sampGetPlayerNickname(ID)), x2 + 2, y2, color) 
+									else renderFontDrawText(fontcheat, string.format('%s[%d]', sampGetPlayerNickname(ID), ID), x2 + 2, y2, color) 
+									end
+								end
 								if mimHealth[0] then renderFontDrawText(fontcheat, string.format('Health: %d', sampGetPlayerHealth(ID)), x2 + 2, y2 + 12, 0xFFFFFFFF) end
 								if mimArmor[0] then renderFontDrawText(fontcheat, string.format('Armour: %d', sampGetPlayerArmor(ID)), x2 + 2, y2 + 24, 0xFFFFFFFF) end
 								if sampIsPlayerPaused(ID) and mimCheckAFK[0] then renderFontDrawText(fontcheat, "AFK", x2 + 100, y2 + 24, 0xFFFF0000) end
@@ -174,7 +189,7 @@ function main()
 									if not mimUseColorKosti[0] then color = join_argb(255, tonumber(mimKostiColor[0] * 255), tonumber(mimKostiColor[1] * 255), tonumber(mimKostiColor[2] * 255))
 									else
 										color = sampGetPlayerColor(ID)
-										local aa, rr, gg, bb = explode_argb(color)
+										aa, rr, gg, bb = explode_argb(color)
 										color = join_argb(255, rr, gg, bb)
 									end
 									local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
@@ -200,7 +215,7 @@ function main()
 									if not mimESPLineUseColor[0] then color = join_argb(255, tonumber(mimESPLineColor[0] * 255), tonumber(mimESPLineColor[1] * 255), tonumber(mimESPLineColor[2] * 255))
 									else 
 										color = sampGetPlayerColor(ID)
-										local aa, rr, gg, bb = explode_argb(color)
+										aa, rr, gg, bb = explode_argb(color)
 										color = join_argb(255, rr, gg, bb)
 									end
 									myx, myy = convert3DCoordsToScreen(myX, myY, myZ)
@@ -210,7 +225,7 @@ function main()
 									if not mimESPUseColor[0] then color = join_argb(255, tonumber(mimESPColor[0] * 255), tonumber(mimESPColor[1] * 255), tonumber(mimESPColor[2] * 255))
 									else
 										color = sampGetPlayerColor(ID)
-										local aa, rr, gg, bb = explode_argb(color)
+										aa, rr, gg, bb = explode_argb(color)
 										color = join_argb(255, rr, gg, bb)
 									end
 									local x1, y1, z1, lx, ly, lz, scx1, scy2, scx2, scy2
@@ -404,6 +419,16 @@ function ()
 		if mimgui.Checkbox("Wallhack", mimWH) then 
 			wh = tostring(mimWH[0])
 			settingsIni.set.wh = wh
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox(u8"Никнеймы", mimNick) then 
+			nick = tostring(mimNick[0])
+			settingsIni.set.nick = nick
+			inicfg.save(mainIni, settings)
+		end
+		if mimgui.Checkbox("ID", mimID) then 
+			id = tostring(mimID[0])
+			settingsIni.set.id = id
 			inicfg.save(mainIni, settings)
 		end
 		if mimgui.Checkbox(u8"Скелет", mimKosti) then 

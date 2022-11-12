@@ -1,5 +1,5 @@
 # Wallhack for SA-MP
-Wallhack (WH) для SA-MP. 
+Wallhack (WH) для SA-MP. Последняя версия: 1.2.2 (https://github.com/Alexander-Markelov/Wallhack-for-SA-MP/releases/latest)
 Чтобы скачать, перейдите по ссылке выше, после чего кликните по архиву, который будет ниже надписи Assets.
 
 - Для установки прочтите инструкцию.
